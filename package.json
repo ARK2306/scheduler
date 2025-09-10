@@ -1,0 +1,17 @@
+{
+  "name": "scheduler-app",
+  "version": "1.0.0",
+  "description": "Weekly schedule management application with timeblock uploads and calendar view",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd client && npm start",
+    "install-all": "npm install && cd backend && npm install && cd ../client && npm install",
+    "build": "npm run install-all && cd client && npm run build",
+    "start": "cd backend && npm start",
+    "postinstall": "npm run install-all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
