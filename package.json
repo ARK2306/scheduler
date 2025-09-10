@@ -7,9 +7,8 @@
     "backend": "cd backend && npm run dev",
     "frontend": "cd client && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../client && npm install",
-    "build": "npm run install-all && cd client && npm run build",
-    "start": "cd backend && npm start",
-    "postinstall": "npm run install-all"
+    "build": "cd backend && npm install && cd ../client && npm install && npm run build",
+    "start": "cd backend && npm start"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
