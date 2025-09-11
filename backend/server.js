@@ -20,12 +20,25 @@ console.log('Directory exists:', fs.existsSync(staticPath));
 // Check if build directory exists
 if (fs.existsSync(staticPath)) {
   console.log('Build directory found, serving static files');
+  
+  // Register static file serving
   fastify.register(require('@fastify/static'), {
     root: staticPath,
-    prefix: '/',
-    // Add wildcard to handle React Router
-    wildcard: true
+    prefix: '/'
   });
+  
+  // Add React Router fallback - this handles all non-API routes
+  fastify.setNotFoundHandler(async (request, reply) => {
+    // Only handle non-API routes
+    if (!request.url.startsWith('/api')) {
+      console.log('Serving React app for route:', request.url);
+      return reply.sendFile('index.html');
+    }
+    
+    // For API routes, return proper 404
+    return reply.code(404).send({ error: 'API endpoint not found' });
+  });
+  
 } else {
   console.log('Build directory not found, serving API only');
   // Add basic root route for API-only mode
@@ -542,8 +555,8 @@ function generateScheduleSummary(finalSchedule, employeeResponses) {
   return summary;
 }
 
-// Note: @fastify/static with wildcard:true handles catch-all routing for React Router
-console.log('Static file serving configured - @fastify/static handles React Router routing');
+// Static file serving configured with React Router fallback
+console.log('Static file serving configured with React Router fallback via setNotFoundHandler');
 
 // Start server
 const start = async () => {
