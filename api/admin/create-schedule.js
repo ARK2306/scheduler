@@ -1,6 +1,6 @@
-import { requireAuth, setCurrentScheduleId, getAdminConfig, saveScheduleTemplate } from '../_storage.js';
+import { requireAuth, setCurrentScheduleId, saveScheduleTemplate } from '../_storage.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -24,11 +24,8 @@ export default function handler(req, res) {
       employeeResponses: []
     };
 
-    saveScheduleTemplate(scheduleId, scheduleTemplate);
-    setCurrentScheduleId(scheduleId);
-    
-    const adminConfig = getAdminConfig();
-    adminConfig.lastUpdated = new Date().toISOString();
+    await saveScheduleTemplate(scheduleId, scheduleTemplate);
+    await setCurrentScheduleId(scheduleId);
     
     console.log('Schedule created:', scheduleId, 'with', timeblocks.length, 'timeblocks');
 

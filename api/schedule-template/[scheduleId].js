@@ -1,13 +1,13 @@
 import { getScheduleTemplates } from '../_storage.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { scheduleId } = req.query;
-    const scheduleTemplates = getScheduleTemplates();
+    const scheduleTemplates = await getScheduleTemplates();
     const template = scheduleTemplates.get(scheduleId);
 
     if (!template) {

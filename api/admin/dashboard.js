@@ -1,6 +1,6 @@
 import { requireAuth, getScheduleTemplates, getCurrentScheduleId, getAdminConfig } from '../_storage.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -10,9 +10,9 @@ export default function handler(req, res) {
   }
 
   try {
-    const scheduleTemplates = getScheduleTemplates();
-    const currentScheduleId = getCurrentScheduleId();
-    const adminConfig = getAdminConfig();
+    const scheduleTemplates = await getScheduleTemplates();
+    const currentScheduleId = await getCurrentScheduleId();
+    const adminConfig = await getAdminConfig();
     
     const currentTemplate = currentScheduleId ? scheduleTemplates.get(currentScheduleId) : null;
     const responseCount = currentTemplate ? currentTemplate.employeeResponses.length : 0;

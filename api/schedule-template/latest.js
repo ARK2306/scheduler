@@ -1,13 +1,13 @@
 import { getScheduleTemplates, getCurrentScheduleId } from '../_storage.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const scheduleTemplates = getScheduleTemplates();
-    const currentScheduleId = getCurrentScheduleId();
+    const scheduleTemplates = await getScheduleTemplates();
+    const currentScheduleId = await getCurrentScheduleId();
     
     if (!currentScheduleId || !scheduleTemplates.has(currentScheduleId)) {
       // Return 200 with null data instead of 404 to indicate no template available

@@ -1,70 +1,31 @@
-// In-memory storage for Vercel (note: this will reset on each deployment and between function calls)
-// For production, you'd want to use a database like Vercel KV, Planetscale, etc.
-// IMPORTANT: Each serverless function call creates a new instance, so storage is not shared!
+// Redis-based storage using Upstash Redis (persistent and serverless-friendly)
+import { Redis } from '@upstash/redis';
 
-import fs from 'fs';
-import path from 'path';
+// Initialize Redis client
+// You'll need to set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables
+const redis = Redis.fromEnv();
 
-// File-based persistence for demo purposes (works in /tmp directory in Vercel)
-const STORAGE_FILE = '/tmp/schedule_storage.json';
-
-function loadStorageFromFile() {
-  try {
-    if (fs.existsSync(STORAGE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(STORAGE_FILE, 'utf8'));
-      return {
-        scheduleTemplates: new Map(data.scheduleTemplates || []),
-        employeeResponses: new Map(data.employeeResponses || []),
-        currentScheduleId: data.currentScheduleId || null,
-        adminConfig: data.adminConfig || {
-          currentScheduleId: null,
-          createdAt: new Date().toISOString()
-        }
-      };
-    }
-  } catch (error) {
-    console.error('Error loading storage:', error);
-  }
-  
-  return {
-    scheduleTemplates: new Map(),
-    employeeResponses: new Map(),
-    currentScheduleId: null,
-    adminConfig: {
-      currentScheduleId: null,
-      createdAt: new Date().toISOString()
-    }
-  };
-}
-
-function saveStorageToFile(storage) {
-  try {
-    const data = {
-      scheduleTemplates: Array.from(storage.scheduleTemplates.entries()),
-      employeeResponses: Array.from(storage.employeeResponses.entries()),
-      currentScheduleId: storage.currentScheduleId,
-      adminConfig: storage.adminConfig
-    };
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error('Error saving storage:', error);
-  }
-}
-
-// Load initial storage
-let storage = loadStorageFromFile();
-let scheduleTemplates = storage.scheduleTemplates;
-let employeeResponses = storage.employeeResponses;
-let currentScheduleId = storage.currentScheduleId;
-let adminConfig = storage.adminConfig;
+// Storage keys
+const KEYS = {
+  CURRENT_SCHEDULE_ID: 'currentScheduleId',
+  SCHEDULE_TEMPLATES: 'scheduleTemplates',
+  EMPLOYEE_RESPONSES: 'employeeResponses',
+  ADMIN_CONFIG: 'adminConfig'
+};
 
 // Debug function to log storage state
-function logStorageState(location) {
-  console.log(`[${location}] Storage state:`, {
-    scheduleTemplates: Array.from(scheduleTemplates.keys()),
-    currentScheduleId,
-    timestamp: new Date().toISOString()
-  });
+async function logStorageState(location) {
+  try {
+    const currentScheduleId = await redis.get(KEYS.CURRENT_SCHEDULE_ID);
+    const scheduleTemplates = await redis.hgetall(KEYS.SCHEDULE_TEMPLATES);
+    console.log(`[${location}] Redis storage state:`, {
+      currentScheduleId,
+      scheduleTemplateCount: Object.keys(scheduleTemplates || {}).length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error(`[${location}] Error logging storage state:`, error);
+  }
 }
 
 // Simple admin authentication
@@ -74,54 +35,89 @@ const ADMIN_CREDENTIALS = {
 };
 
 // Storage functions
-export function getScheduleTemplates() {
-  // Reload from file to get latest data
-  const storage = loadStorageFromFile();
-  scheduleTemplates = storage.scheduleTemplates;
-  logStorageState('getScheduleTemplates');
-  return scheduleTemplates;
+export async function getScheduleTemplates() {
+  try {
+    await logStorageState('getScheduleTemplates');
+    const templates = await redis.hgetall(KEYS.SCHEDULE_TEMPLATES);
+    // Convert Redis hash back to Map-like object
+    const scheduleMap = new Map();
+    if (templates) {
+      Object.entries(templates).forEach(([key, value]) => {
+        scheduleMap.set(key, JSON.parse(value));
+      });
+    }
+    return scheduleMap;
+  } catch (error) {
+    console.error('Error getting schedule templates:', error);
+    return new Map();
+  }
 }
 
-export function getEmployeeResponses() {
-  // Reload from file to get latest data
-  const storage = loadStorageFromFile();
-  employeeResponses = storage.employeeResponses;
-  logStorageState('getEmployeeResponses');
-  return employeeResponses;
+export async function getEmployeeResponses() {
+  try {
+    await logStorageState('getEmployeeResponses');
+    const responses = await redis.hgetall(KEYS.EMPLOYEE_RESPONSES);
+    // Convert Redis hash back to Map-like object
+    const responseMap = new Map();
+    if (responses) {
+      Object.entries(responses).forEach(([key, value]) => {
+        responseMap.set(key, JSON.parse(value));
+      });
+    }
+    return responseMap;
+  } catch (error) {
+    console.error('Error getting employee responses:', error);
+    return new Map();
+  }
 }
 
-export function getCurrentScheduleId() {
-  // Reload from file to get latest data
-  const storage = loadStorageFromFile();
-  currentScheduleId = storage.currentScheduleId;
-  logStorageState('getCurrentScheduleId');
-  return currentScheduleId;
+export async function getCurrentScheduleId() {
+  try {
+    await logStorageState('getCurrentScheduleId');
+    return await redis.get(KEYS.CURRENT_SCHEDULE_ID);
+  } catch (error) {
+    console.error('Error getting current schedule ID:', error);
+    return null;
+  }
 }
 
-export function setCurrentScheduleId(id) {
-  currentScheduleId = id;
-  adminConfig.currentScheduleId = id;
-  saveStorageToFile({
-    scheduleTemplates,
-    employeeResponses,
-    currentScheduleId,
-    adminConfig
-  });
-  logStorageState('setCurrentScheduleId');
+export async function setCurrentScheduleId(id) {
+  try {
+    await redis.set(KEYS.CURRENT_SCHEDULE_ID, id);
+    // Also update admin config
+    const adminConfig = await getAdminConfig();
+    adminConfig.currentScheduleId = id;
+    adminConfig.lastUpdated = new Date().toISOString();
+    await redis.set(KEYS.ADMIN_CONFIG, JSON.stringify(adminConfig));
+    await logStorageState('setCurrentScheduleId');
+  } catch (error) {
+    console.error('Error setting current schedule ID:', error);
+  }
 }
 
-export function getAdminConfig() {
-  return adminConfig;
+export async function getAdminConfig() {
+  try {
+    const config = await redis.get(KEYS.ADMIN_CONFIG);
+    return config ? JSON.parse(config) : {
+      currentScheduleId: null,
+      createdAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting admin config:', error);
+    return {
+      currentScheduleId: null,
+      createdAt: new Date().toISOString()
+    };
+  }
 }
 
-export function saveScheduleTemplate(scheduleId, template) {
-  scheduleTemplates.set(scheduleId, template);
-  saveStorageToFile({
-    scheduleTemplates,
-    employeeResponses,
-    currentScheduleId,
-    adminConfig
-  });
+export async function saveScheduleTemplate(scheduleId, template) {
+  try {
+    await redis.hset(KEYS.SCHEDULE_TEMPLATES, scheduleId, JSON.stringify(template));
+    await logStorageState('saveScheduleTemplate');
+  } catch (error) {
+    console.error('Error saving schedule template:', error);
+  }
 }
 
 export function getAdminCredentials() {

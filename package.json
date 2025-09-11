@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.3"
   }
 }
