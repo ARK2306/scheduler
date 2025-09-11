@@ -14,10 +14,19 @@ const path = require('path');
 
 // Register static file serving for production
 if (process.env.NODE_ENV === 'production') {
-  fastify.register(require('@fastify/static'), {
-    root: path.join(__dirname, '../client/build'),
-    prefix: '/'
-  });
+  const staticPath = path.join(__dirname, '../client/build');
+  console.log('Checking static files at:', staticPath);
+  
+  // Check if build directory exists
+  if (fs.existsSync(staticPath)) {
+    console.log('Build directory found, serving static files');
+    fastify.register(require('@fastify/static'), {
+      root: staticPath,
+      prefix: '/'
+    });
+  } else {
+    console.log('Build directory not found, serving API only');
+  }
 }
 
 // File-based persistent storage
@@ -521,11 +530,38 @@ function generateScheduleSummary(finalSchedule, employeeResponses) {
   return summary;
 }
 
-// Catch-all route for React Router (production only)
+// Catch-all route for React Router (production only) - MUST be last!
 if (process.env.NODE_ENV === 'production') {
-  fastify.get('*', async (request, reply) => {
-    return reply.sendFile('index.html');
-  });
+  const staticPath = path.join(__dirname, '../client/build');
+  
+  if (fs.existsSync(staticPath)) {
+    // Only add catch-all if we have static files
+    fastify.get('/*', async (request, reply) => {
+      // Don't catch API routes
+      if (request.url.startsWith('/api')) {
+        return reply.code(404).send({ error: 'API endpoint not found' });
+      }
+      
+      try {
+        return reply.sendFile('index.html');
+      } catch (err) {
+        console.error('Error serving index.html:', err);
+        return reply.code(500).send({ error: 'Failed to serve application' });
+      }
+    });
+  } else {
+    // Add basic API info route when no frontend
+    fastify.get('/', async (request, reply) => {
+      return {
+        message: 'Scheduler API Server',
+        status: 'running',
+        endpoints: {
+          health: '/api/health',
+          admin: '/api/admin/*'
+        }
+      };
+    });
+  }
 }
 
 // Start server
