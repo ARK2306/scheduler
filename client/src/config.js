@@ -1,7 +1,7 @@
 // API Configuration
 const config = {
   API_BASE_URL: process.env.NODE_ENV === 'production' 
-    ? process.env.REACT_APP_API_URL || 'https://your-backend-url.onrender.com'
+    ? '' // For Vercel deployment, API routes are on the same domain
     : 'http://localhost:3001'
 };
 

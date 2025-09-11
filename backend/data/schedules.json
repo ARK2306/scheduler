@@ -1,1 +1,20 @@
-{}
+{
+  "schedule_1757548117125": {
+    "id": "schedule_1757548117125",
+    "timeblocks": [
+      {
+        "id": 1757548107567,
+        "day": "Monday",
+        "time": "5:30 AM",
+        "duration": 5.5,
+        "shiftType": "grad",
+        "peopleNeeded": 2,
+        "title": "Grad Only - 5.5h (2 people)"
+      }
+    ],
+    "createdAt": "2025-09-10T23:48:37.125Z",
+    "employeeResponses": [
+      "schedule_1757548117125_aryan"
+    ]
+  }
+}

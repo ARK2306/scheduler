@@ -7,8 +7,9 @@
     "backend": "cd backend && npm run dev",
     "frontend": "cd client && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../client && npm install",
-    "build": "cd backend && npm install && cd ../client && npm install && npm run build",
-    "start": "cd backend && npm start"
+    "build": "cd client && npm install && npm run build",
+    "start": "cd backend && npm start",
+    "vercel-build": "cd client && npm install && npm run build"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
