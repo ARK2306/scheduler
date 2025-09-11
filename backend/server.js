@@ -22,7 +22,9 @@ if (fs.existsSync(staticPath)) {
   console.log('Build directory found, serving static files');
   fastify.register(require('@fastify/static'), {
     root: staticPath,
-    prefix: '/'
+    prefix: '/',
+    // Add wildcard to handle React Router
+    wildcard: true
   });
 } else {
   console.log('Build directory not found, serving API only');
@@ -540,26 +542,8 @@ function generateScheduleSummary(finalSchedule, employeeResponses) {
   return summary;
 }
 
-// Catch-all route for React Router - MUST be last!
-// Only add if we have static files
-if (fs.existsSync(staticPath)) {
-  console.log('Adding catch-all route for React Router');
-  fastify.get('/*', async (request, reply) => {
-    // Don't catch API routes
-    if (request.url.startsWith('/api')) {
-      return reply.code(404).send({ error: 'API endpoint not found' });
-    }
-    
-    try {
-      return reply.sendFile('index.html');
-    } catch (err) {
-      console.error('Error serving index.html:', err);
-      return reply.code(500).send({ error: 'Failed to serve application' });
-    }
-  });
-} else {
-  console.log('No catch-all route added - API only mode');
-}
+// Note: @fastify/static with wildcard:true handles catch-all routing for React Router
+console.log('Static file serving configured - @fastify/static handles React Router routing');
 
 // Start server
 const start = async () => {
