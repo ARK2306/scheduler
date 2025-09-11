@@ -568,7 +568,10 @@ if (process.env.NODE_ENV === 'production') {
 const start = async () => {
   try {
     const port = process.env.PORT || 3001;
-    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    // Always bind to 0.0.0.0 in containers for external access
+    const host = '0.0.0.0';
+    
+    console.log(`Starting server on ${host}:${port} (NODE_ENV: ${process.env.NODE_ENV})`);
     
     await fastify.listen({ port: port, host: host });
     fastify.log.info(`Server listening on ${host}:${port}`);
