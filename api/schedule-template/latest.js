@@ -10,12 +10,18 @@ export default function handler(req, res) {
     const currentScheduleId = getCurrentScheduleId();
     
     if (!currentScheduleId || !scheduleTemplates.has(currentScheduleId)) {
-      return res.status(404).json({ error: 'No schedule template found' });
+      // Return 200 with null data instead of 404 to indicate no template available
+      return res.status(200).json({ 
+        success: false,
+        template: null,
+        message: 'No schedule template found' 
+      });
     }
 
     const template = scheduleTemplates.get(currentScheduleId);
     return res.status(200).json({
       success: true,
+      template,
       ...template
     });
   } catch (error) {

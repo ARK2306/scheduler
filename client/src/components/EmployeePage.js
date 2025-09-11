@@ -5,7 +5,7 @@ import './EmployeePage.css';
 function EmployeePage() {
   const [employeeName, setEmployeeName] = useState('');
   const [studentType, setStudentType] = useState('');
-  const [scheduleTemplate, setScheduleTemplate] = useState(null);
+  const [scheduleTemplate, setScheduleTemplate] = useState(undefined);
   const [preferences, setPreferences] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -24,19 +24,38 @@ function EmployeePage() {
         : `${config.API_BASE_URL}/api/schedule-template/latest`;
         
       const response = await fetch(endpoint);
+      
       if (response.ok) {
-        const template = await response.json();
-        setScheduleTemplate(template);
-        
-        // Initialize preferences
-        const initialPreferences = {};
-        template.timeblocks.forEach(block => {
-          initialPreferences[block.id] = 'willing';
-        });
-        setPreferences(initialPreferences);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          
+          if (result.success && result.template) {
+            setScheduleTemplate(result.template);
+            
+            // Initialize preferences
+            const initialPreferences = {};
+            result.template.timeblocks.forEach(block => {
+              initialPreferences[block.id] = 'willing';
+            });
+            setPreferences(initialPreferences);
+          } else {
+            // Handle case where no template is available
+            console.log('No schedule template found:', result.message);
+            setScheduleTemplate(null);
+          }
+        } else {
+          console.error('API returned non-JSON response');
+          setScheduleTemplate(null);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to load schedule template:', response.status, errorText);
+        setScheduleTemplate(null);
       }
     } catch (error) {
       console.error('Failed to load schedule template:', error);
+      setScheduleTemplate(null);
     }
   };
 
@@ -115,7 +134,21 @@ function EmployeePage() {
     );
   }
 
-  if (!scheduleTemplate) {
+  if (scheduleTemplate === null) {
+    return (
+      <div className="employee-page">
+        <div className="employee-header">
+          <h2>Employee Portal - Submit Your Availability</h2>
+          <div className="no-schedule-message">
+            <h3>No Schedule Available</h3>
+            <p>There is currently no schedule template available. Please check back later or contact your administrator.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (scheduleTemplate === undefined) {
     return (
       <div className="employee-page">
         <div className="loading-message">

@@ -9,6 +9,36 @@
   margin-bottom: 30px;
 }
 
+.deployment-link {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.deployment-link h3 {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.deployment-link a {
+  color: #fff;
+  text-decoration: none;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  margin-left: 10px;
+}
+
+.deployment-link a:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
 .admin-header h2 {
   color: #333;
   margin-bottom: 10px;
@@ -48,6 +78,62 @@
 .delete-schedule-btn:hover {
   background: #c82333;
   transform: scale(1.05);
+}
+
+.employee-link-display {
+  background: #e7f3ff;
+  color: #004085;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-top: 15px;
+  border: 1px solid #b8daff;
+}
+
+.employee-link-display h3 {
+  margin: 0 0 10px 0;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.employee-link-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.employee-link-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.employee-link-input:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.copy-link-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.copy-link-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
 }
 
 .admin-content {

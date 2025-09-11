@@ -11,11 +11,16 @@ export default function handler(req, res) {
     const template = scheduleTemplates.get(scheduleId);
 
     if (!template) {
-      return res.status(404).json({ error: 'Schedule template not found' });
+      return res.status(200).json({ 
+        success: false,
+        template: null,
+        message: 'Schedule template not found' 
+      });
     }
 
     return res.status(200).json({
       success: true,
+      template,
       ...template
     });
   } catch (error) {

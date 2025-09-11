@@ -99,6 +99,14 @@ function AdminLogin({ onLogin }) {
           </button>
         </form>
 
+        <div className="demo-credentials">
+          <small>
+            <strong>Demo Credentials:</strong><br/>
+            Username: admin<br/>
+            Password: admin123
+          </small>
+        </div>
+
       </div>
     </div>
   );

@@ -107,7 +107,6 @@ function AdminPage() {
       if (response.ok) {
         const result = await response.json();
         setCurrentScheduleId(result.scheduleId);
-        alert(`Schedule template saved! Employee link: ${window.location.origin}/employee?schedule=${result.scheduleId}`);
         setCurrentView('responses');
       }
     } catch (error) {
@@ -220,15 +219,41 @@ function AdminPage() {
   const renderCreateView = () => (
     <>
       <div className="admin-header">
+        <div className="deployment-link">
+          <h3>🌐 Live Application: <a href="https://scheduler-bak7smwus-aryan-reddy-kalluris-projects.vercel.app" target="_blank" rel="noopener noreferrer">https://scheduler-bak7smwus-aryan-reddy-kalluris-projects.vercel.app</a></h3>
+        </div>
         <h2>Admin Portal - Create Weekly Schedule</h2>
         <p>Add timeblocks to create the weekly schedule template</p>
         {currentScheduleId && (
-          <div className="current-schedule-info">
-            ✅ Current Schedule ID: {currentScheduleId}
-            <button className="delete-schedule-btn" onClick={deleteSchedule}>
-              🗑️ Delete Schedule
-            </button>
-          </div>
+          <>
+            <div className="current-schedule-info">
+              ✅ Current Schedule ID: {currentScheduleId}
+              <button className="delete-schedule-btn" onClick={deleteSchedule}>
+                🗑️ Delete Schedule
+              </button>
+            </div>
+            <div className="employee-link-display">
+              <h3>👥 Link for Employees:</h3>
+              <div className="employee-link-container">
+                <input 
+                  type="text" 
+                  value={`${window.location.origin}/employee?schedule=${currentScheduleId}`}
+                  readOnly
+                  className="employee-link-input"
+                  onClick={(e) => e.target.select()}
+                />
+                <button 
+                  className="copy-link-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/employee?schedule=${currentScheduleId}`);
+                    alert('Link copied to clipboard!');
+                  }}
+                >
+                  📋 Copy
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
