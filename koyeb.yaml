@@ -1,0 +1,14 @@
+services:
+- name: scheduler-app
+  type: web
+  build:
+    type: docker
+  instance_type: nano
+  ports:
+  - port: 3001
+    protocol: http
+  env:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: 3001

@@ -8,13 +8,14 @@
     "frontend": "cd client && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../client && npm install",
     "build": "cd client && npm install && npm run build",
-    "start": "cd backend && npm start",
+    "start": "cd backend && node server.js",
     "vercel-build": "cd client && npm install && npm run build"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
   },
   "dependencies": {
-    "@upstash/redis": "^1.35.3"
+    "@upstash/redis": "^1.35.3",
+    "dotenv": "^17.2.2"
   }
 }

@@ -5,6 +5,12 @@ import { Redis } from '@upstash/redis';
 // Check if Redis environment variables are available
 const hasRedisConfig = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
+console.log('🔍 Redis Environment Check:', {
+  hasUrl: !!process.env.UPSTASH_REDIS_REST_URL,
+  hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+  urlPreview: process.env.UPSTASH_REDIS_REST_URL ? process.env.UPSTASH_REDIS_REST_URL.substring(0, 30) + '...' : 'undefined'
+});
+
 // Initialize Redis client only if environment variables are available
 let redis = null;
 if (hasRedisConfig) {

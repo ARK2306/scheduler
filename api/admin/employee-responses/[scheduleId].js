@@ -1,6 +1,6 @@
 import { requireAuth, getScheduleTemplates, getEmployeeResponses } from '../../_storage.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -11,8 +11,8 @@ export default function handler(req, res) {
 
   try {
     const { scheduleId } = req.query;
-    const scheduleTemplates = getScheduleTemplates();
-    const employeeResponses = getEmployeeResponses();
+    const scheduleTemplates = await getScheduleTemplates();
+    const employeeResponses = await getEmployeeResponses();
     
     const template = scheduleTemplates.get(scheduleId);
 
@@ -20,7 +20,9 @@ export default function handler(req, res) {
       return res.status(404).json({ error: 'Schedule template not found' });
     }
 
-    const responses = template.employeeResponses.map(responseId => {
+    // Handle case where employeeResponses might not exist or be empty
+    const employeeResponseIds = template.employeeResponses || [];
+    const responses = employeeResponseIds.map(responseId => {
       return employeeResponses.get(responseId);
     }).filter(Boolean);
 

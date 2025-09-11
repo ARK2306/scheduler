@@ -201,7 +201,7 @@ function AdminPage() {
       if (response.ok) {
         const dashboard = await response.json();
         
-        if (dashboard.hasCurrentSchedule) {
+        if (dashboard.hasCurrentSchedule && dashboard.currentTemplate) {
           setCurrentScheduleId(dashboard.currentScheduleId);
           setTimeblocks(dashboard.currentTemplate.timeblocks || []);
           
@@ -209,6 +209,12 @@ function AdminPage() {
           if (dashboard.responseCount > 0) {
             await loadEmployeeResponses(dashboard.currentScheduleId);
           }
+        } else {
+          // Clear state when there's no current schedule
+          setCurrentScheduleId(null);
+          setTimeblocks([]);
+          setEmployeeResponses([]);
+          setFinalSchedule(null);
         }
       }
     } catch (error) {

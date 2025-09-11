@@ -1,6 +1,6 @@
 import { requireAuth, getScheduleTemplates, getEmployeeResponses, getCurrentScheduleId, setCurrentScheduleId } from '../../_storage.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -11,9 +11,9 @@ export default function handler(req, res) {
 
   try {
     const { scheduleId } = req.query;
-    const scheduleTemplates = getScheduleTemplates();
-    const employeeResponses = getEmployeeResponses();
-    const currentScheduleId = getCurrentScheduleId();
+    const scheduleTemplates = await getScheduleTemplates();
+    const employeeResponses = await getEmployeeResponses();
+    const currentScheduleId = await getCurrentScheduleId();
     
     if (!scheduleTemplates.has(scheduleId)) {
       return res.status(404).json({ error: 'Schedule not found' });
@@ -23,7 +23,7 @@ export default function handler(req, res) {
     const schedule = scheduleTemplates.get(scheduleId);
     
     // Delete associated employee responses
-    if (schedule.employeeResponses) {
+    if (schedule && schedule.employeeResponses) {
       schedule.employeeResponses.forEach(responseId => {
         employeeResponses.delete(responseId);
       });
@@ -34,7 +34,7 @@ export default function handler(req, res) {
     
     // Update current schedule if this was the current one
     if (currentScheduleId === scheduleId) {
-      setCurrentScheduleId(null);
+      await setCurrentScheduleId(null);
     }
 
     return res.status(200).json({
