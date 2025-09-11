@@ -30,8 +30,8 @@ RUN adduser -S nextjs -u 1001
 RUN chown -R nextjs:nodejs /app
 USER nextjs
 
-# Expose port
-EXPOSE 3001
+# Expose port (Koyeb sets PORT env var)
+EXPOSE 8000
 
 # Set working directory to backend
 WORKDIR /app/backend

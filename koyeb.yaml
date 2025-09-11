@@ -5,11 +5,11 @@ services:
     type: docker
   instance_type: nano
   ports:
-  - port: 3001
+  - port: 8000
     protocol: http
   health_check:
     path: /api/health
-    port: 3001
+    port: 8000
     initial_delay: 30s
     interval: 10s
     timeout: 5s
@@ -17,5 +17,3 @@ services:
   env:
   - key: NODE_ENV
     value: production
-  - key: PORT
-    value: 3001
