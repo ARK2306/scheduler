@@ -1,9 +1,23 @@
 // Redis-based storage using Upstash Redis (persistent and serverless-friendly)
+// Falls back to in-memory storage if Redis is not configured
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis client
-// You'll need to set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables
-const redis = Redis.fromEnv();
+// Check if Redis environment variables are available
+const hasRedisConfig = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
+
+// Initialize Redis client only if environment variables are available
+let redis = null;
+if (hasRedisConfig) {
+  try {
+    redis = Redis.fromEnv();
+    console.log('✅ Redis connected successfully');
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error);
+    redis = null;
+  }
+} else {
+  console.log('⚠️ Redis not configured, using fallback storage. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables.');
+}
 
 // Storage keys
 const KEYS = {
@@ -13,16 +27,37 @@ const KEYS = {
   ADMIN_CONFIG: 'adminConfig'
 };
 
+// Fallback in-memory storage when Redis is not available
+let fallbackStorage = {
+  scheduleTemplates: new Map(),
+  employeeResponses: new Map(),
+  currentScheduleId: null,
+  adminConfig: {
+    currentScheduleId: null,
+    createdAt: new Date().toISOString()
+  }
+};
+
 // Debug function to log storage state
 async function logStorageState(location) {
   try {
-    const currentScheduleId = await redis.get(KEYS.CURRENT_SCHEDULE_ID);
-    const scheduleTemplates = await redis.hgetall(KEYS.SCHEDULE_TEMPLATES);
-    console.log(`[${location}] Redis storage state:`, {
-      currentScheduleId,
-      scheduleTemplateCount: Object.keys(scheduleTemplates || {}).length,
-      timestamp: new Date().toISOString()
-    });
+    if (redis) {
+      const currentScheduleId = await redis.get(KEYS.CURRENT_SCHEDULE_ID);
+      const scheduleTemplates = await redis.hgetall(KEYS.SCHEDULE_TEMPLATES);
+      console.log(`[${location}] Redis storage state:`, {
+        storageType: 'Redis',
+        currentScheduleId,
+        scheduleTemplateCount: Object.keys(scheduleTemplates || {}).length,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log(`[${location}] Fallback storage state:`, {
+        storageType: 'In-Memory Fallback',
+        currentScheduleId: fallbackStorage.currentScheduleId,
+        scheduleTemplateCount: fallbackStorage.scheduleTemplates.size,
+        timestamp: new Date().toISOString()
+      });
+    }
   } catch (error) {
     console.error(`[${location}] Error logging storage state:`, error);
   }
@@ -34,61 +69,82 @@ const ADMIN_CREDENTIALS = {
   password: 'admin123' // In production, use proper hashing
 };
 
-// Storage functions
+// Storage functions with Redis fallback
 export async function getScheduleTemplates() {
   try {
     await logStorageState('getScheduleTemplates');
-    const templates = await redis.hgetall(KEYS.SCHEDULE_TEMPLATES);
-    // Convert Redis hash back to Map-like object
-    const scheduleMap = new Map();
-    if (templates) {
-      Object.entries(templates).forEach(([key, value]) => {
-        scheduleMap.set(key, JSON.parse(value));
-      });
+    
+    if (redis) {
+      // Use Redis
+      const templates = await redis.hgetall(KEYS.SCHEDULE_TEMPLATES);
+      const scheduleMap = new Map();
+      if (templates) {
+        Object.entries(templates).forEach(([key, value]) => {
+          scheduleMap.set(key, JSON.parse(value));
+        });
+      }
+      return scheduleMap;
+    } else {
+      // Use fallback storage
+      return fallbackStorage.scheduleTemplates;
     }
-    return scheduleMap;
   } catch (error) {
     console.error('Error getting schedule templates:', error);
-    return new Map();
+    return fallbackStorage.scheduleTemplates;
   }
 }
 
 export async function getEmployeeResponses() {
   try {
     await logStorageState('getEmployeeResponses');
-    const responses = await redis.hgetall(KEYS.EMPLOYEE_RESPONSES);
-    // Convert Redis hash back to Map-like object
-    const responseMap = new Map();
-    if (responses) {
-      Object.entries(responses).forEach(([key, value]) => {
-        responseMap.set(key, JSON.parse(value));
-      });
+    
+    if (redis) {
+      const responses = await redis.hgetall(KEYS.EMPLOYEE_RESPONSES);
+      const responseMap = new Map();
+      if (responses) {
+        Object.entries(responses).forEach(([key, value]) => {
+          responseMap.set(key, JSON.parse(value));
+        });
+      }
+      return responseMap;
+    } else {
+      return fallbackStorage.employeeResponses;
     }
-    return responseMap;
   } catch (error) {
     console.error('Error getting employee responses:', error);
-    return new Map();
+    return fallbackStorage.employeeResponses;
   }
 }
 
 export async function getCurrentScheduleId() {
   try {
     await logStorageState('getCurrentScheduleId');
-    return await redis.get(KEYS.CURRENT_SCHEDULE_ID);
+    
+    if (redis) {
+      return await redis.get(KEYS.CURRENT_SCHEDULE_ID);
+    } else {
+      return fallbackStorage.currentScheduleId;
+    }
   } catch (error) {
     console.error('Error getting current schedule ID:', error);
-    return null;
+    return fallbackStorage.currentScheduleId;
   }
 }
 
 export async function setCurrentScheduleId(id) {
   try {
-    await redis.set(KEYS.CURRENT_SCHEDULE_ID, id);
-    // Also update admin config
-    const adminConfig = await getAdminConfig();
-    adminConfig.currentScheduleId = id;
-    adminConfig.lastUpdated = new Date().toISOString();
-    await redis.set(KEYS.ADMIN_CONFIG, JSON.stringify(adminConfig));
+    if (redis) {
+      await redis.set(KEYS.CURRENT_SCHEDULE_ID, id);
+      // Also update admin config
+      const adminConfig = await getAdminConfig();
+      adminConfig.currentScheduleId = id;
+      adminConfig.lastUpdated = new Date().toISOString();
+      await redis.set(KEYS.ADMIN_CONFIG, JSON.stringify(adminConfig));
+    } else {
+      fallbackStorage.currentScheduleId = id;
+      fallbackStorage.adminConfig.currentScheduleId = id;
+      fallbackStorage.adminConfig.lastUpdated = new Date().toISOString();
+    }
     await logStorageState('setCurrentScheduleId');
   } catch (error) {
     console.error('Error setting current schedule ID:', error);
@@ -97,23 +153,28 @@ export async function setCurrentScheduleId(id) {
 
 export async function getAdminConfig() {
   try {
-    const config = await redis.get(KEYS.ADMIN_CONFIG);
-    return config ? JSON.parse(config) : {
-      currentScheduleId: null,
-      createdAt: new Date().toISOString()
-    };
+    if (redis) {
+      const config = await redis.get(KEYS.ADMIN_CONFIG);
+      return config ? JSON.parse(config) : {
+        currentScheduleId: null,
+        createdAt: new Date().toISOString()
+      };
+    } else {
+      return fallbackStorage.adminConfig;
+    }
   } catch (error) {
     console.error('Error getting admin config:', error);
-    return {
-      currentScheduleId: null,
-      createdAt: new Date().toISOString()
-    };
+    return fallbackStorage.adminConfig;
   }
 }
 
 export async function saveScheduleTemplate(scheduleId, template) {
   try {
-    await redis.hset(KEYS.SCHEDULE_TEMPLATES, scheduleId, JSON.stringify(template));
+    if (redis) {
+      await redis.hset(KEYS.SCHEDULE_TEMPLATES, scheduleId, JSON.stringify(template));
+    } else {
+      fallbackStorage.scheduleTemplates.set(scheduleId, template);
+    }
     await logStorageState('saveScheduleTemplate');
   } catch (error) {
     console.error('Error saving schedule template:', error);
