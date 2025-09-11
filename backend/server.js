@@ -46,8 +46,8 @@ const ADMIN_CREDENTIALS = {
   password: 'admin123' // In production, use proper hashing
 };
 
-// Load existing data
-function loadData() {
+// Load existing data asynchronously
+async function loadData() {
   try {
     if (fs.existsSync(SCHEDULES_FILE)) {
       const schedulesData = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
@@ -63,6 +63,8 @@ function loadData() {
       adminConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
       currentScheduleId = adminConfig.currentScheduleId;
     }
+    
+    console.log('Data loaded successfully');
   } catch (error) {
     console.error('Error loading data:', error);
   }
@@ -79,12 +81,18 @@ function saveData() {
   }
 }
 
-// Load data on startup
-loadData();
+// Load data on startup (non-blocking)
+loadData().catch(console.error);
 
-// Health check route
+// Health check route - optimized for fast response
 fastify.get('/api/health', async (request, reply) => {
-  return { status: 'OK', message: 'Scheduler API is running' };
+  reply.type('application/json');
+  return { 
+    status: 'OK', 
+    message: 'Scheduler API is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  };
 });
 
 // Admin login

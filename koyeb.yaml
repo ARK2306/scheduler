@@ -7,7 +7,13 @@ services:
   ports:
   - port: 3001
     protocol: http
-  health_check: /api/health
+  health_check:
+    path: /api/health
+    port: 3001
+    initial_delay: 30s
+    interval: 10s
+    timeout: 5s
+    retries: 3
   env:
   - key: NODE_ENV
     value: production
