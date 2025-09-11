@@ -1,13 +1,71 @@
-// In-memory storage for Vercel (note: this will reset on each deployment)
+// In-memory storage for Vercel (note: this will reset on each deployment and between function calls)
 // For production, you'd want to use a database like Vercel KV, Planetscale, etc.
+// IMPORTANT: Each serverless function call creates a new instance, so storage is not shared!
 
-let scheduleTemplates = new Map();
-let employeeResponses = new Map();
-let currentScheduleId = null;
-let adminConfig = {
-  currentScheduleId: null,
-  createdAt: new Date().toISOString()
-};
+import fs from 'fs';
+import path from 'path';
+
+// File-based persistence for demo purposes (works in /tmp directory in Vercel)
+const STORAGE_FILE = '/tmp/schedule_storage.json';
+
+function loadStorageFromFile() {
+  try {
+    if (fs.existsSync(STORAGE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STORAGE_FILE, 'utf8'));
+      return {
+        scheduleTemplates: new Map(data.scheduleTemplates || []),
+        employeeResponses: new Map(data.employeeResponses || []),
+        currentScheduleId: data.currentScheduleId || null,
+        adminConfig: data.adminConfig || {
+          currentScheduleId: null,
+          createdAt: new Date().toISOString()
+        }
+      };
+    }
+  } catch (error) {
+    console.error('Error loading storage:', error);
+  }
+  
+  return {
+    scheduleTemplates: new Map(),
+    employeeResponses: new Map(),
+    currentScheduleId: null,
+    adminConfig: {
+      currentScheduleId: null,
+      createdAt: new Date().toISOString()
+    }
+  };
+}
+
+function saveStorageToFile(storage) {
+  try {
+    const data = {
+      scheduleTemplates: Array.from(storage.scheduleTemplates.entries()),
+      employeeResponses: Array.from(storage.employeeResponses.entries()),
+      currentScheduleId: storage.currentScheduleId,
+      adminConfig: storage.adminConfig
+    };
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error saving storage:', error);
+  }
+}
+
+// Load initial storage
+let storage = loadStorageFromFile();
+let scheduleTemplates = storage.scheduleTemplates;
+let employeeResponses = storage.employeeResponses;
+let currentScheduleId = storage.currentScheduleId;
+let adminConfig = storage.adminConfig;
+
+// Debug function to log storage state
+function logStorageState(location) {
+  console.log(`[${location}] Storage state:`, {
+    scheduleTemplates: Array.from(scheduleTemplates.keys()),
+    currentScheduleId,
+    timestamp: new Date().toISOString()
+  });
+}
 
 // Simple admin authentication
 const ADMIN_CREDENTIALS = {
@@ -17,24 +75,53 @@ const ADMIN_CREDENTIALS = {
 
 // Storage functions
 export function getScheduleTemplates() {
+  // Reload from file to get latest data
+  const storage = loadStorageFromFile();
+  scheduleTemplates = storage.scheduleTemplates;
+  logStorageState('getScheduleTemplates');
   return scheduleTemplates;
 }
 
 export function getEmployeeResponses() {
+  // Reload from file to get latest data
+  const storage = loadStorageFromFile();
+  employeeResponses = storage.employeeResponses;
+  logStorageState('getEmployeeResponses');
   return employeeResponses;
 }
 
 export function getCurrentScheduleId() {
+  // Reload from file to get latest data
+  const storage = loadStorageFromFile();
+  currentScheduleId = storage.currentScheduleId;
+  logStorageState('getCurrentScheduleId');
   return currentScheduleId;
 }
 
 export function setCurrentScheduleId(id) {
   currentScheduleId = id;
   adminConfig.currentScheduleId = id;
+  saveStorageToFile({
+    scheduleTemplates,
+    employeeResponses,
+    currentScheduleId,
+    adminConfig
+  });
+  logStorageState('setCurrentScheduleId');
 }
 
 export function getAdminConfig() {
   return adminConfig;
+}
+
+export function saveScheduleTemplate(scheduleId, template) {
+  scheduleTemplates.set(scheduleId, template);
+  saveStorageToFile({
+    scheduleTemplates,
+    employeeResponses,
+    currentScheduleId,
+    adminConfig
+  });
 }
 
 export function getAdminCredentials() {

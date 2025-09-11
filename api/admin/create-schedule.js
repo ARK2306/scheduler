@@ -1,4 +1,4 @@
-import { requireAuth, getScheduleTemplates, setCurrentScheduleId, getAdminConfig } from '../_storage.js';
+import { requireAuth, setCurrentScheduleId, getAdminConfig, saveScheduleTemplate } from '../_storage.js';
 
 export default function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,7 +16,6 @@ export default function handler(req, res) {
       return res.status(400).json({ error: 'Invalid timeblocks data' });
     }
 
-    const scheduleTemplates = getScheduleTemplates();
     const scheduleId = `schedule_${Date.now()}`;
     const scheduleTemplate = {
       id: scheduleId,
@@ -25,11 +24,13 @@ export default function handler(req, res) {
       employeeResponses: []
     };
 
-    scheduleTemplates.set(scheduleId, scheduleTemplate);
+    saveScheduleTemplate(scheduleId, scheduleTemplate);
     setCurrentScheduleId(scheduleId);
     
     const adminConfig = getAdminConfig();
     adminConfig.lastUpdated = new Date().toISOString();
+    
+    console.log('Schedule created:', scheduleId, 'with', timeblocks.length, 'timeblocks');
 
     return res.status(200).json({
       success: true,
