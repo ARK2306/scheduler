@@ -183,6 +183,21 @@ fastify.get('/api/admin/dashboard', { preHandler: requireAuth }, async (request,
   }
 });
 
+// Debug endpoint to check memory state
+fastify.get('/api/debug/schedules', async (request, reply) => {
+  return {
+    scheduleTemplatesSize: scheduleTemplates.size,
+    scheduleTemplatesKeys: Array.from(scheduleTemplates.keys()),
+    currentScheduleId: currentScheduleId,
+    adminConfig: adminConfig,
+    allSchedules: Array.from(scheduleTemplates.entries()).map(([key, value]) => ({
+      key,
+      id: value.id,
+      createdAt: value.createdAt
+    }))
+  };
+});
+
 // Admin: Create schedule template (protected)
 fastify.post('/api/admin/create-schedule', { preHandler: requireAuth }, async (request, reply) => {
   try {
