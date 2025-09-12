@@ -16,5 +16,37 @@
     "employeeResponses": [
       "schedule_1757548117125_aryan"
     ]
+  },
+  "schedule_1757641503216": {
+    "id": "schedule_1757641503216",
+    "timeblocks": [
+      {
+        "id": 1757641500000,
+        "day": "Tuesday",
+        "time": "9:00 AM",
+        "duration": 4,
+        "shiftType": "undergrad",
+        "peopleNeeded": 1,
+        "title": "Test Schedule - 4h (1 person)"
+      }
+    ],
+    "createdAt": "2025-09-12T01:45:03.216Z",
+    "employeeResponses": []
+  },
+  "schedule_1757641836516": {
+    "id": "schedule_1757641836516",
+    "timeblocks": [
+      {
+        "id": 1757641800000,
+        "day": "Wednesday",
+        "time": "2:00 PM",
+        "duration": 6,
+        "shiftType": "mixed",
+        "peopleNeeded": 3,
+        "title": "Database Test Schedule - 6h (3 people)"
+      }
+    ],
+    "createdAt": "2025-09-12T01:50:36.516Z",
+    "employeeResponses": []
   }
 }

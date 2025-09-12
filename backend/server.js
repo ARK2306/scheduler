@@ -11,6 +11,7 @@ fastify.register(require('@fastify/cors'), {
 
 const fs = require('fs');
 const path = require('path');
+const DatabaseManager = require('./database');
 
 // Register static file serving for production
 const staticPath = path.join(__dirname, '../client/build');
@@ -54,24 +55,17 @@ if (fs.existsSync(staticPath)) {
   });
 }
 
-// File-based persistent storage
-const DATA_DIR = path.join(__dirname, 'data');
-const SCHEDULES_FILE = path.join(DATA_DIR, 'schedules.json');
-const RESPONSES_FILE = path.join(DATA_DIR, 'responses.json');
-const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+// Database persistence (PostgreSQL in production, files locally)
 
-// Create data directory if it doesn't exist
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-// Initialize storage
+// Initialize database manager and storage
+const db = new DatabaseManager();
 let scheduleTemplates = new Map();
 let employeeResponses = new Map();
 let currentScheduleId = null;
 let adminConfig = {
   currentScheduleId: null,
-  createdAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  lastUpdated: new Date().toISOString()
 };
 
 // Simple admin authentication
@@ -80,69 +74,30 @@ const ADMIN_CREDENTIALS = {
   password: 'admin123' // In production, use proper hashing
 };
 
-// Load existing data asynchronously
+// Load existing data asynchronously using database manager
 async function loadData() {
   try {
-    if (fs.existsSync(SCHEDULES_FILE)) {
-      const schedulesData = JSON.parse(fs.readFileSync(SCHEDULES_FILE, 'utf8'));
-      scheduleTemplates = new Map(Object.entries(schedulesData));
-    }
+    scheduleTemplates = await db.loadScheduleTemplates();
+    employeeResponses = await db.loadEmployeeResponses();
+    adminConfig = await db.loadAdminConfig();
+    currentScheduleId = adminConfig.currentScheduleId;
     
-    if (fs.existsSync(RESPONSES_FILE)) {
-      const responsesData = JSON.parse(fs.readFileSync(RESPONSES_FILE, 'utf8'));
-      employeeResponses = new Map(Object.entries(responsesData));
-    }
-    
-    if (fs.existsSync(CONFIG_FILE)) {
-      adminConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-      currentScheduleId = adminConfig.currentScheduleId;
-    }
-    
-    console.log('Data loaded successfully');
+    console.log('Data loaded successfully via database manager');
   } catch (error) {
     console.error('Error loading data:', error);
   }
 }
 
-// Save data to files with enhanced error handling and logging
-function saveData() {
+// Save data using database manager
+async function saveData() {
   try {
     console.log('Saving data - scheduleTemplates size:', scheduleTemplates.size);
     console.log('Saving data - currentScheduleId:', currentScheduleId);
     
-    // Check directory permissions
-    const dirStats = fs.statSync(DATA_DIR);
-    console.log('Data directory permissions:', dirStats.mode.toString(8));
-    
-    // Save schedules
-    const schedulesJson = JSON.stringify(Object.fromEntries(scheduleTemplates), null, 2);
-    fs.writeFileSync(SCHEDULES_FILE, schedulesJson);
-    console.log('Schedules saved successfully to:', SCHEDULES_FILE);
-    
-    // Save responses
-    const responsesJson = JSON.stringify(Object.fromEntries(employeeResponses), null, 2);
-    fs.writeFileSync(RESPONSES_FILE, responsesJson);
-    console.log('Responses saved successfully to:', RESPONSES_FILE);
-    
-    // Save config
-    const configJson = JSON.stringify(adminConfig, null, 2);
-    fs.writeFileSync(CONFIG_FILE, configJson);
-    console.log('Config saved successfully to:', CONFIG_FILE);
-    
-    // Verify files were created
-    console.log('Files verification:');
-    console.log('- Schedules file exists:', fs.existsSync(SCHEDULES_FILE));
-    console.log('- Responses file exists:', fs.existsSync(RESPONSES_FILE));
-    console.log('- Config file exists:', fs.existsSync(CONFIG_FILE));
-    
+    await db.saveAll(scheduleTemplates, employeeResponses, adminConfig);
+    console.log('All data saved successfully via database manager');
   } catch (error) {
     console.error('Error saving data:', error);
-    console.error('Error details:', {
-      code: error.code,
-      errno: error.errno,
-      path: error.path,
-      syscall: error.syscall
-    });
   }
 }
 
@@ -252,7 +207,7 @@ fastify.post('/api/admin/create-schedule', { preHandler: requireAuth }, async (r
     adminConfig.lastUpdated = new Date().toISOString();
     
     // Save to persistent storage
-    saveData();
+    await saveData();
 
     return {
       success: true,
@@ -336,7 +291,7 @@ fastify.post('/api/employee/submit-preferences', async (request, reply) => {
     }
 
     // Save to persistent storage
-    saveData();
+    await saveData();
 
     return {
       success: true,
@@ -404,7 +359,7 @@ fastify.delete('/api/admin/delete-schedule/:scheduleId', { preHandler: requireAu
     }
     
     // Save to persistent storage
-    saveData();
+    await saveData();
 
     return {
       success: true,
