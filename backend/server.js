@@ -104,14 +104,45 @@ async function loadData() {
   }
 }
 
-// Save data to files
+// Save data to files with enhanced error handling and logging
 function saveData() {
   try {
-    fs.writeFileSync(SCHEDULES_FILE, JSON.stringify(Object.fromEntries(scheduleTemplates), null, 2));
-    fs.writeFileSync(RESPONSES_FILE, JSON.stringify(Object.fromEntries(employeeResponses), null, 2));
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(adminConfig, null, 2));
+    console.log('Saving data - scheduleTemplates size:', scheduleTemplates.size);
+    console.log('Saving data - currentScheduleId:', currentScheduleId);
+    
+    // Check directory permissions
+    const dirStats = fs.statSync(DATA_DIR);
+    console.log('Data directory permissions:', dirStats.mode.toString(8));
+    
+    // Save schedules
+    const schedulesJson = JSON.stringify(Object.fromEntries(scheduleTemplates), null, 2);
+    fs.writeFileSync(SCHEDULES_FILE, schedulesJson);
+    console.log('Schedules saved successfully to:', SCHEDULES_FILE);
+    
+    // Save responses
+    const responsesJson = JSON.stringify(Object.fromEntries(employeeResponses), null, 2);
+    fs.writeFileSync(RESPONSES_FILE, responsesJson);
+    console.log('Responses saved successfully to:', RESPONSES_FILE);
+    
+    // Save config
+    const configJson = JSON.stringify(adminConfig, null, 2);
+    fs.writeFileSync(CONFIG_FILE, configJson);
+    console.log('Config saved successfully to:', CONFIG_FILE);
+    
+    // Verify files were created
+    console.log('Files verification:');
+    console.log('- Schedules file exists:', fs.existsSync(SCHEDULES_FILE));
+    console.log('- Responses file exists:', fs.existsSync(RESPONSES_FILE));
+    console.log('- Config file exists:', fs.existsSync(CONFIG_FILE));
+    
   } catch (error) {
     console.error('Error saving data:', error);
+    console.error('Error details:', {
+      code: error.code,
+      errno: error.errno,
+      path: error.path,
+      syscall: error.syscall
+    });
   }
 }
 
